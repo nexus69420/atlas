@@ -1,0 +1,52 @@
+# Atlas V1 — local development stack
+# Why Docker Compose: one command boots API + Postgres with identical
+# networking/credentials across machines. No paid cloud required.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: atlas-db
+    environment:
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: atlas
+      POSTGRES_DB: atlas
+    ports:
+      - "5432:5432"
+    volumes:
+      - atlas_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: atlas-api
+    ports:
+      - "8000:8000"
+    environment:
+      APP_NAME: Atlas API
+      APP_ENV: development
+      DEBUG: "true"
+      API_V1_PREFIX: /api/v1
+      # Inside Compose, the DB host is the service name `db`, not localhost
+      DATABASE_URL: postgresql+psycopg://atlas:atlas@db:5432/atlas
+      SECRET_KEY: dev-only-change-me-atlas-secret-key
+      ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+      JWT_ALGORITHM: HS256
+      STORAGE_PATH: /app/storage/datasets
+      MAX_UPLOAD_BYTES: "52428800"
+    volumes:
+      # Live reload during development
+      - ./backend/app:/app/app
+      - atlas_dataset_storage:/app/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  atlas_pg_data:
+  atlas_dataset_storage:
