@@ -22,11 +22,21 @@ ML components (profiling, training, evaluation, explainability) live as modules 
 
 ## Current status
 
-| Sprint | Focus | Status |
-|--------|--------|--------|
-| Sprint 0 | Planning & documentation | Done |
-| **Sprint 1** | Backend foundation | **In progress** |
-| Sprint 2+ | Auth, projects, datasets, experiments… | Planned |
+| Area | Status |
+|------|--------|
+| Backend V1 spine (auth → deploy) | Done |
+| Frontend (landing + app shell + projects) | In progress |
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.local.example .env.local
+npm install
+npm run dev
+```
+
+UI: http://localhost:3000 · API: http://127.0.0.1:8000
 
 ### Sprint 1 deliverable
 
@@ -179,6 +189,7 @@ atlas/
 │   ├── tests/
 │   ├── Dockerfile
 │   └── pyproject.toml
+├── frontend/         # Next.js UI (Astra-inspired dark product shell)
 ├── docs/
 ├── docker-compose.yml
 └── .env.example
@@ -195,7 +206,7 @@ atlas/
 | Config | pydantic-settings | Fail fast on bad env |
 | Containers | Docker Compose | Reproducible local stack |
 | Lint / format | Ruff + Black | Fast + consistent |
-| Frontend | Next.js | Deferred to a later sprint |
+| Frontend | Next.js + Tailwind | Dark product UI; talks to FastAPI |
 
 ---
 

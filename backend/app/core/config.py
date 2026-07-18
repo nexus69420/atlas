@@ -39,7 +39,8 @@ class Settings(BaseSettings):
     artifact_storage_path: str = "storage/artifacts"
     max_upload_bytes: int = 50 * 1024 * 1024  # 50 MiB
     dataset_preview_default_rows: int = 20
-    dataset_preview_max_rows: int = 100
+    # Comma-separated browser origins allowed to call the API
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
 
 @lru_cache
