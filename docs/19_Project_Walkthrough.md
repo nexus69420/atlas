@@ -214,31 +214,18 @@ The UI currently covers steps 1–3 deeply. Steps 4–7 are API-complete and are
 
 ## 7. What we can add next (prioritized)
 
-### Near-term (highest leverage)
+> **Authoritative next-evolution plan:** [`20_Roadmap_Extension.md`](./20_Roadmap_Extension.md)  
+> That document **extends** (does not replace) this walkthrough and the original Vision / PRD.
+
+### Near-term snapshot (still valid; see extension for full P0–P3)
 
 1. UI for experiments — run form, comparison table, winner cards  
 2. UI for profiling — Atlas Report visualization  
 3. UI for SHAP — feature-importance bars + instance view  
 4. UI for deploy / predict — one-click deploy + predict playground  
-5. Basic monitoring — prediction logs, latency, simple drift signals  
+5. Prediction logging + artifact persistence  
 6. CI (GitHub Actions) — pytest + frontend build on PR  
-7. Persist fitted pipelines on experiment (faster explain / deploy, stronger artifact lineage)
-
-### Medium-term (V1+ / V2)
-
-- Dataset versioning  
-- Cross-validation / Optuna-style HPO  
-- XGBoost / LightGBM in the model registry  
-- Async job queue (Celery / Redis / Temporal) for long training  
-- First-class model registry beyond the deployment row  
-- Team workspaces / RBAC  
-
-### Long-term (vision)
-
-- Multi-agent debate (data / ML / eval agents) settled by experiments  
-- Continuous retraining loops  
-- Plugin architecture  
-- Enterprise audit logs / cloud deploy targets  
+7. Experiment reports, decision journal, and lineage (P1)  
 
 ---
 

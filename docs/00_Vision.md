@@ -128,6 +128,10 @@ Full lifecycle dreams (multi-agent debate, enterprise RBAC, cloud deploy) are re
 | `00_Vision.md` (this file) | Why Atlas exists and how we think |
 | `01_Product_Requirements_Document.md` | What V1 must deliver and what is out of scope |
 | `06_System_Architecture.md` | How the system is structured (evolves with code) |
-| Roadmap / feature specs | Sequencing and module detail |
+| `15_Roadmap.md` | Roadmap index |
+| `19_Project_Walkthrough.md` | End-to-end build narrative |
+| `20_Roadmap_Extension.md` | Additive next-evolution roadmap (does not replace this vision) |
 
 Planning is frozen enough to ship. Remaining docs evolve **while coding**.
+
+**Roadmap extension:** After V1 foundation, prioritize engineering workflows, artifact persistence, decision traceability, and research-style experiment reporting over feature count. See [`20_Roadmap_Extension.md`](./20_Roadmap_Extension.md).

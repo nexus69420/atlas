@@ -27,8 +27,11 @@ ML components (profiling, training, evaluation, explainability) live as modules 
 | Backend V1 spine (auth → deploy) | Done |
 | Frontend (landing + app shell + projects) | In progress |
 
-Full narrative (features, build history, roadmap, ChatGPT prompt):  
+Full narrative (features, build history, ChatGPT prompt):  
 [`docs/19_Project_Walkthrough.md`](docs/19_Project_Walkthrough.md)
+
+Next-evolution roadmap (artifacts, lineage, reports, decision journal — additive):  
+[`docs/20_Roadmap_Extension.md`](docs/20_Roadmap_Extension.md)
 
 ### Frontend
 
