@@ -20,6 +20,7 @@ from app.models import (  # noqa: F401
     Deployment,
     Experiment,
     Explanation,
+    PredictionLog,
     Project,
     User,
 )

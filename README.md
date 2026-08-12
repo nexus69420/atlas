@@ -1,22 +1,56 @@
 # Atlas
 
-**Atlas** is an autonomous machine learning engineering platform.  
+**Atlas** is an open-source **ML Engineering Platform**.  
 It turns ML from trial-and-error into evidence-driven engineering.
 
 Atlas is **not** AutoML, a chatbot, or a no-code builder.  
-It is an **ML Engineering Platform** — an intelligent partner for engineers building production ML systems.
+It is an intelligent partner for engineers building production ML systems — profile data, compare models with trade-offs, explain with SHAP, deploy with an artifact + Docker bundle, and log predictions.
+
+---
+
+## Why this repo (interview / hire signal)
+
+| Signal | Where it shows up |
+|--------|-------------------|
+| Evidence over automation | Atlas Report, experiment comparison + trade-offs |
+| Explainability | SHAP per model on completed experiments |
+| Reproducibility | Experiment artifacts (`config.json`, `metrics.json`, train-split pipelines) |
+| Serving | Deployment artifacts + exportable Docker bundle |
+| Auditability | Prediction logs on every `predict` call |
+| Engineering discipline | Thin routers → services → repos; Alembic; CI |
+
+Full narrative: [`docs/19_Project_Walkthrough.md`](docs/19_Project_Walkthrough.md)  
+Roadmap (additive): [`docs/20_Roadmap_Extension.md`](docs/20_Roadmap_Extension.md)
 
 ---
 
 ## Architecture (V1)
 
-Modular monolith (not microservices):
-
 ```
-Browser → React / Next.js → FastAPI → Services → Repositories → PostgreSQL
+Browser → Next.js → FastAPI (thin routers) → Services → Repositories → PostgreSQL
+                         └─ app/ml/ (profile, train, eval, SHAP, deploy)
 ```
 
-ML components (profiling, training, evaluation, explainability) live as modules inside the backend.
+---
+
+## Demo path (10 minutes)
+
+1. Start Postgres + API + UI (see Quick start).
+2. Register → create a project → upload a CSV.
+3. **Profile** the dataset (Atlas Report).
+4. **Run an experiment** (multi-model classification/regression).
+5. Open the experiment → comparison + **SHAP**.
+6. **Deploy** the winner → call **predict** → check prediction logs.
+
+Offline / CI-friendly script (downloads public Telco churn when online):
+
+```bash
+cd backend
+.venv\Scripts\activate   # or: source .venv/bin/activate
+python scripts/e2e_churn_flow.py
+# or fully offline:
+python scripts/e2e_churn_flow.py --offline
+```
 
 ---
 
@@ -24,14 +58,11 @@ ML components (profiling, training, evaluation, explainability) live as modules 
 
 | Area | Status |
 |------|--------|
-| Backend V1 spine (auth → deploy) | Done |
-| Frontend (landing + app shell + projects) | In progress |
-
-Full narrative (features, build history, ChatGPT prompt):  
-[`docs/19_Project_Walkthrough.md`](docs/19_Project_Walkthrough.md)
-
-Next-evolution roadmap (artifacts, lineage, reports, decision journal — additive):  
-[`docs/20_Roadmap_Extension.md`](docs/20_Roadmap_Extension.md)
+| Backend V1 spine (auth → profile → experiment → SHAP → deploy → predict logs) | Done |
+| Experiment artifact persistence | Done |
+| Prediction logging | Done |
+| Frontend (landing + projects + dataset report + experiment workspace) | Done |
+| CI (pytest + frontend build) | Done |
 
 ### Frontend
 
@@ -44,65 +75,25 @@ npm run dev
 
 UI: http://localhost:3000 · API: http://127.0.0.1:8000
 
-### Sprint 1 deliverable
+### API surface
 
 ```http
-GET /health
-```
+GET  /health
 
-```json
-{ "status": "healthy" }
-```
-
-### Auth (in progress)
-
-```http
 POST /api/v1/auth/register
 POST /api/v1/auth/login
 GET  /api/v1/auth/me
-```
 
-### Projects
-
-```http
-POST   /api/v1/projects
-GET    /api/v1/projects
-GET    /api/v1/projects/{id}
-PATCH  /api/v1/projects/{id}
-DELETE /api/v1/projects/{id}
-```
-
-### Datasets
-
-```http
-POST   /api/v1/projects/{project_id}/datasets
-GET    /api/v1/projects/{project_id}/datasets
-GET    /api/v1/projects/{project_id}/datasets/{id}
-GET    /api/v1/projects/{project_id}/datasets/{id}/preview
-POST   /api/v1/projects/{project_id}/datasets/{id}/profile
-GET    /api/v1/projects/{project_id}/datasets/{id}/profile
-DELETE /api/v1/projects/{project_id}/datasets/{id}
-```
-
-### Experiments
-
-```http
-POST   /api/v1/projects/{project_id}/experiments
-GET    /api/v1/projects/{project_id}/experiments
-GET    /api/v1/projects/{project_id}/experiments/{id}
-GET    /api/v1/projects/{project_id}/experiments/{id}/comparison
-POST   /api/v1/projects/{project_id}/experiments/{id}/explain
-GET    /api/v1/projects/{project_id}/experiments/{id}/explanations/{model_key}
-```
-
-### Deployments
-
-```http
-POST   /api/v1/projects/{project_id}/deployments
-GET    /api/v1/projects/{project_id}/deployments
-GET    /api/v1/projects/{project_id}/deployments/{id}
-POST   /api/v1/projects/{project_id}/deployments/{id}/predict
-POST   /api/v1/projects/{project_id}/deployments/{id}/deactivate
+POST|GET|PATCH|DELETE /api/v1/projects...
+POST|GET|DELETE       /api/v1/projects/{id}/datasets...
+POST|GET              /api/v1/projects/{id}/datasets/{id}/profile
+POST|GET              /api/v1/projects/{id}/experiments...
+GET                   /api/v1/projects/{id}/experiments/{id}/comparison
+POST|GET              /api/v1/projects/{id}/experiments/{id}/explain...
+POST|GET              /api/v1/projects/{id}/deployments...
+POST                  /api/v1/projects/{id}/deployments/{id}/predict
+GET                   /api/v1/projects/{id}/deployments/{id}/predictions
+POST                  /api/v1/projects/{id}/deployments/{id}/deactivate
 ```
 
 After Postgres is up:
@@ -120,6 +111,7 @@ alembic upgrade head
 
 - Docker & Docker Compose
 - Python 3.11+ (optional, for local non-Docker runs)
+- Node 20+ (frontend)
 
 ### Run with Docker Compose
 
@@ -127,29 +119,21 @@ alembic upgrade head
 docker compose up --build
 ```
 
-Then open:
-
 - API docs: http://localhost:8000/docs  
 - Health: http://localhost:8000/health  
 
 ### Local backend (without Docker for the API)
 
 ```bash
-# start Postgres only
 docker compose up -d db
-
 cp .env.example .env
 
 cd backend
 python -m venv .venv
-
-# Windows
-.venv\Scripts\activate
-
-# macOS / Linux
-# source .venv/bin/activate
-
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
 pip install -e ".[dev]"
+alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -159,18 +143,13 @@ uvicorn app.main:app --reload --port 8000
 cd backend
 pytest
 ruff check .
-black --check .
+python scripts/e2e_churn_flow.py --offline
 ```
 
-### Database migrations
-
-Alembic is wired to the same `DATABASE_URL` as the app.  
-No models yet in Sprint 1 — first revision lands with auth/projects.
-
 ```bash
-cd backend
-alembic revision --autogenerate -m "describe change"
-alembic upgrade head
+cd frontend
+npm ci
+npm run build
 ```
 
 ---
@@ -180,39 +159,27 @@ alembic upgrade head
 ```
 atlas/
 ├── backend/
-│   ├── app/
-│   │   ├── api/          # HTTP routes (thin)
-│   │   ├── core/         # settings, shared infra
-│   │   ├── db/           # engine, session, Base
-│   │   ├── models/       # SQLAlchemy ORM
-│   │   ├── schemas/      # Pydantic API contracts
-│   │   ├── repositories/ # DB queries
-│   │   ├── services/     # business logic
-│   │   ├── ml/           # profiling, training, eval, explainability
-│   │   ├── workers/      # background jobs (later)
-│   │   └── main.py
+│   ├── app/           # api, services, repos, ml, models
 │   ├── alembic/
-│   ├── tests/
-│   ├── Dockerfile
-│   └── pyproject.toml
-├── frontend/         # Next.js UI (Astra-inspired dark product shell)
+│   ├── scripts/       # e2e_churn_flow.py
+│   └── tests/
+├── frontend/          # Next.js product UI
 ├── docs/
-├── docker-compose.yml
-└── .env.example
+├── .github/workflows/ # CI
+└── docker-compose.yml
 ```
 
 ---
 
 ## Stack (V1)
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| API | FastAPI | Typed, fast, excellent OpenAPI |
-| DB | PostgreSQL + SQLAlchemy 2 + Alembic | Production default; migrations as code |
-| Config | pydantic-settings | Fail fast on bad env |
-| Containers | Docker Compose | Reproducible local stack |
-| Lint / format | Ruff + Black | Fast + consistent |
-| Frontend | Next.js + Tailwind | Dark product UI; talks to FastAPI |
+| Layer | Choice |
+|-------|--------|
+| API | FastAPI |
+| DB | PostgreSQL + SQLAlchemy 2 + Alembic |
+| ML | pandas, scikit-learn, SHAP, joblib |
+| Frontend | Next.js + Tailwind |
+| CI | GitHub Actions |
 
 ---
 

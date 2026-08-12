@@ -9,6 +9,7 @@ from app.models.dataset_profile import DatasetProfile
 from app.models.deployment import Deployment
 from app.models.experiment import Experiment
 from app.models.explanation import Explanation
+from app.models.prediction_log import PredictionLog
 from app.models.project import Project
 from app.models.user import User
 
@@ -19,6 +20,7 @@ __all__ = [
     "Deployment",
     "Experiment",
     "Explanation",
+    "PredictionLog",
     "Project",
     "User",
 ]

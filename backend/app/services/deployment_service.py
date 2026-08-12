@@ -18,11 +18,14 @@ from app.core.storage import LocalStorage
 from app.ml.deployment.bundle import write_deployment_bundle
 from app.ml.training.deploy_fit import fit_production_pipeline
 from app.models.deployment import Deployment
+from app.models.prediction_log import PredictionLog
 from app.models.user import User
 from app.repositories.deployment_repository import DeploymentRepository
+from app.repositories.prediction_log_repository import PredictionLogRepository
 from app.schemas.deployment import (
     DeploymentCreateRequest,
     DeploymentResponse,
+    PredictionLogResponse,
     PredictRequest,
     PredictResponse,
 )
@@ -35,6 +38,7 @@ class DeploymentService:
     def __init__(self, db: Session, storage: LocalStorage | None = None) -> None:
         self._db = db
         self._deployments = DeploymentRepository(db)
+        self._prediction_logs = PredictionLogRepository(db)
         self._projects = ProjectService(db)
         self._experiments = ExperimentService(db, storage=storage)
         self._datasets = DatasetService(db, storage=storage)
@@ -259,6 +263,17 @@ class DeploymentService:
         deployment.prediction_count += len(payload.instances)
         self._deployments.save(deployment)
 
+        self._prediction_logs.create(
+            PredictionLog(
+                deployment_id=deployment.id,
+                project_id=deployment.project_id,
+                n_instances=len(payload.instances),
+                request_payload={"instances": payload.instances},
+                predictions=predictions,
+                probabilities=probabilities,
+            )
+        )
+
         return PredictResponse(
             deployment_id=deployment.id,
             model_key=deployment.model_key,
@@ -266,3 +281,17 @@ class DeploymentService:
             probabilities=probabilities,
             feature_columns=feature_columns,
         )
+
+    def list_prediction_logs(
+        self,
+        owner: User,
+        project_id: UUID,
+        deployment_id: UUID,
+        *,
+        limit: int = 50,
+    ) -> list[PredictionLogResponse]:
+        self.get_for_project(owner, project_id, deployment_id)
+        rows = self._prediction_logs.list_by_deployment(
+            deployment_id, limit=max(1, min(limit, 200))
+        )
+        return [PredictionLogResponse.model_validate(row) for row in rows]

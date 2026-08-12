@@ -8,6 +8,7 @@ from app.api.deps import CurrentUser, DeploymentServiceDep
 from app.schemas.deployment import (
     DeploymentCreateRequest,
     DeploymentResponse,
+    PredictionLogResponse,
     PredictRequest,
     PredictResponse,
 )
@@ -47,6 +48,23 @@ def get_deployment(
     deployment_service: DeploymentServiceDep,
 ) -> DeploymentResponse:
     return deployment_service.get_response(current_user, project_id, deployment_id)
+
+
+@router.get(
+    "/{deployment_id}/predictions",
+    response_model=list[PredictionLogResponse],
+)
+def list_prediction_logs(
+    project_id: UUID,
+    deployment_id: UUID,
+    current_user: CurrentUser,
+    deployment_service: DeploymentServiceDep,
+    limit: int = 50,
+) -> list[PredictionLogResponse]:
+    """Return recent prediction audit logs for a deployment."""
+    return deployment_service.list_prediction_logs(
+        current_user, project_id, deployment_id, limit=limit
+    )
 
 
 @router.post("/{deployment_id}/predict", response_model=PredictResponse)

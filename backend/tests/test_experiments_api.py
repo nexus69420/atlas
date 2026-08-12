@@ -47,6 +47,19 @@ def test_create_list_get_experiment(
     assert body["results"] is not None
     assert len(body["results"]["models"]) == 2
     assert body["results"]["comparison"]["winner"] is not None
+    artifacts = body["results"]["artifacts"]
+    assert artifacts["root_key"].startswith("experiments/")
+    assert "logistic_regression" in artifacts["pipelines"]
+
+    from pathlib import Path
+
+    from app.core.config import get_settings
+
+    settings = get_settings()
+    root = Path(settings.artifact_storage_path) / artifacts["root_key"]
+    assert (root / "config.json").exists()
+    assert (root / "metrics.json").exists()
+    assert (root / "pipelines" / "logistic_regression.joblib").exists()
 
     listed = client.get(
         f"/api/v1/projects/{project_id}/experiments",

@@ -45,3 +45,16 @@ class PredictResponse(BaseModel):
     predictions: list[Any]
     probabilities: list[list[float]] | None = None
     feature_columns: list[str]
+
+
+class PredictionLogResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    deployment_id: UUID
+    project_id: UUID
+    n_instances: int
+    request_payload: dict[str, Any]
+    predictions: list[Any]
+    probabilities: list[Any] | None = None
+    created_at: datetime

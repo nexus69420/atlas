@@ -83,6 +83,16 @@ def test_deploy_predict_deactivate(
     assert len(pred_body["predictions"]) == 2
     assert pred_body["probabilities"] is not None
 
+    logs = client.get(
+        f"/api/v1/projects/{project_id}/deployments/{body['id']}/predictions",
+        headers=auth_headers,
+    )
+    assert logs.status_code == 200
+    log_rows = logs.json()
+    assert len(log_rows) == 1
+    assert log_rows[0]["n_instances"] == 2
+    assert len(log_rows[0]["predictions"]) == 2
+
     fetched = client.get(
         f"/api/v1/projects/{project_id}/deployments/{body['id']}",
         headers=auth_headers,

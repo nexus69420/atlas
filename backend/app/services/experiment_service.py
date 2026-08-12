@@ -1,11 +1,13 @@
 """Experiment business logic — ownership, run orchestration, persistence."""
 
+from pathlib import Path
 from uuid import UUID
 
 import pandas as pd
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.config import get_settings
 from app.core.storage import LocalStorage
 from app.ml.training.experiment_runner import run_experiment
 from app.models.experiment import Experiment
@@ -23,6 +25,10 @@ class ExperimentService:
         self._projects = ProjectService(db)
         self._datasets = DatasetService(db, storage=storage)
         self._storage = storage or LocalStorage()
+        settings = get_settings()
+        self._artifact_storage = LocalStorage(
+            root=Path(settings.artifact_storage_path)
+        )
 
     def create_and_run(
         self,
@@ -64,6 +70,9 @@ class ExperimentService:
                     f"Target column '{payload.target_column}' not found in dataset"
                 )
 
+            artifact_root_key = f"experiments/{experiment.id}"
+            artifact_dir = self._artifact_storage.absolute_path(artifact_root_key)
+
             results = run_experiment(
                 frame,
                 target_column=payload.target_column,
@@ -71,6 +80,8 @@ class ExperimentService:
                 test_size=payload.test_size,
                 random_state=payload.random_state,
                 model_keys=payload.models,
+                artifact_dir=artifact_dir,
+                artifact_root_key=artifact_root_key,
             )
             experiment.status = "completed"
             experiment.results = results

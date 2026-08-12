@@ -6,9 +6,12 @@ train several, score them, and explain the trade-offs.
 
 from __future__ import annotations
 
+import json
 import time
+from pathlib import Path
 from typing import Any, Literal
 
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -137,8 +140,14 @@ def run_experiment(
     test_size: float = 0.2,
     random_state: int = 42,
     model_keys: list[str] | None = None,
+    artifact_dir: Path | None = None,
+    artifact_root_key: str | None = None,
 ) -> dict[str, Any]:
-    """Train multiple models and return structured comparison evidence."""
+    """Train multiple models and return structured comparison evidence.
+
+    When ``artifact_dir`` is set, persist config/metrics JSON and each
+    fitted train-split pipeline under that directory (reproducibility signal).
+    """
     if target_column not in frame.columns:
         raise ValueError(f"Target column '{target_column}' not found")
 
@@ -179,6 +188,11 @@ def run_experiment(
 
     registry = _resolve_models(task_type, model_keys)
     model_results: list[dict[str, Any]] = []
+    pipeline_keys: dict[str, str] = {}
+
+    if artifact_dir is not None:
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        (artifact_dir / "pipelines").mkdir(exist_ok=True)
 
     for model_key, spec in registry.items():
         preprocessor = build_preprocessor(x_train)
@@ -222,23 +236,78 @@ def run_experiment(
             }
         )
 
+        if artifact_dir is not None:
+            rel = f"pipelines/{model_key}.joblib"
+            joblib.dump(pipe, artifact_dir / rel)
+            if artifact_root_key:
+                pipeline_keys[model_key] = f"{artifact_root_key}/{rel}"
+            else:
+                pipeline_keys[model_key] = rel
+
     class_distribution = None
     if task_type == "classification":
         class_distribution = {
             str(k): int(v) for k, v in y_train.value_counts().to_dict().items()
         }
 
-    return {
-        "data": {
-            "n_rows_used": int(len(x)),
-            "n_features_used": int(len(feature_cols)),
-            "feature_columns": feature_cols,
-            "dropped_columns": dropped,
+    data_block = {
+        "n_rows_used": int(len(x)),
+        "n_features_used": int(len(feature_cols)),
+        "feature_columns": feature_cols,
+        "dropped_columns": dropped,
+        "test_size": test_size,
+        "random_state": random_state,
+        "stratified": stratify is not None,
+        "class_distribution_train": class_distribution,
+    }
+    comparison = _build_comparison(task_type, model_results)
+
+    artifacts: dict[str, Any] | None = None
+    if artifact_dir is not None:
+        config_payload = {
+            "target_column": target_column,
+            "task_type": task_type,
             "test_size": test_size,
             "random_state": random_state,
-            "stratified": stratify is not None,
-            "class_distribution_train": class_distribution,
-        },
+            "model_keys": list(registry.keys()),
+            "feature_columns": feature_cols,
+            "dropped_columns": dropped,
+            "note": (
+                "Pipelines were fit on the train split only. "
+                "Deployment re-fits on the full dataset for serving."
+            ),
+        }
+        (artifact_dir / "config.json").write_text(
+            json.dumps(config_payload, indent=2),
+            encoding="utf-8",
+        )
+        (artifact_dir / "metrics.json").write_text(
+            json.dumps(
+                {"models": model_results, "comparison": comparison},
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        (artifact_dir / "data_summary.json").write_text(
+            json.dumps(data_block, indent=2),
+            encoding="utf-8",
+        )
+        root = artifact_root_key or str(artifact_dir)
+        artifacts = {
+            "root_key": root,
+            "config_key": f"{root}/config.json" if artifact_root_key else "config.json",
+            "metrics_key": (
+                f"{root}/metrics.json" if artifact_root_key else "metrics.json"
+            ),
+            "pipelines": pipeline_keys,
+            "scope": "train_split",
+        }
+
+    result: dict[str, Any] = {
+        "data": data_block,
         "models": model_results,
-        "comparison": _build_comparison(task_type, model_results),
+        "comparison": comparison,
     }
+    if artifacts is not None:
+        result["artifacts"] = artifacts
+    return result
